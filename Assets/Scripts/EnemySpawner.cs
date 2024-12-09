@@ -5,6 +5,8 @@ public class EnemySpawner : MonoBehaviour
 {
     public GameObject goblinPrefab;
     public GameObject skeletonPrefab;
+    public GameObject darkBanditPrefab;
+    public GameObject lightBanditPrefab;
     public Transform player;
     public float spawnInterval = 5f;
     public float spawnRadius = 10f;
@@ -14,6 +16,8 @@ public class EnemySpawner : MonoBehaviour
 
     private float spawnTimer;
     private float maxEnemiesIncreaseTimer;
+    private float lightBanditSpawnTimer = 240f;
+    private float darkBanditSpawnTimer = 300f;
     private int maxEnemies;
     private List<GameObject> activeEnemies = new List<GameObject>();
 
@@ -33,11 +37,13 @@ public class EnemySpawner : MonoBehaviour
     {
         spawnTimer -= Time.deltaTime;
         maxEnemiesIncreaseTimer -= Time.deltaTime;
+        lightBanditSpawnTimer -= Time.deltaTime;
+        darkBanditSpawnTimer -= Time.deltaTime;
 
         if (maxEnemiesIncreaseTimer <= 0f)
         {
-            maxEnemies += 2;             
-            spawnInterval = Mathf.Max(1f, spawnInterval - 2f); 
+            maxEnemies += 2;
+            spawnInterval = Mathf.Max(1f, spawnInterval - 2f);
             maxEnemiesIncreaseTimer = increaseMaxEnemiesInterval;
         }
 
@@ -47,12 +53,32 @@ public class EnemySpawner : MonoBehaviour
             spawnTimer = spawnInterval;
         }
 
+        if (lightBanditSpawnTimer <= 0f)
+        {
+            SpawnSpecificEnemy(lightBanditPrefab);
+            lightBanditSpawnTimer = 240f;
+        }
+
+        if (darkBanditSpawnTimer <= 0f)
+        {
+            SpawnSpecificEnemy(darkBanditPrefab);
+            darkBanditSpawnTimer = 300f;
+        }
+
         activeEnemies.RemoveAll(enemy => enemy == null);
     }
 
     private void SpawnRandomEnemy()
     {
-        GameObject enemyPrefab = goblinPrefab;
+        GameObject enemyPrefab = Random.value < 0.65f ? goblinPrefab : skeletonPrefab;
+        Vector2 spawnPosition = GetRandomSpawnPosition();
+
+        GameObject newEnemy = Instantiate(enemyPrefab, spawnPosition, Quaternion.identity);
+        activeEnemies.Add(newEnemy);
+    }
+
+    private void SpawnSpecificEnemy(GameObject enemyPrefab)
+    {
         Vector2 spawnPosition = GetRandomSpawnPosition();
 
         GameObject newEnemy = Instantiate(enemyPrefab, spawnPosition, Quaternion.identity);

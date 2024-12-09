@@ -27,6 +27,7 @@ public class Enemy : Character
     public float maxY = 14f;
     private bool counted = false;
     private bool isPathFinding = false;
+    private Player playerScript;
 
     protected override void Start()
     {
@@ -42,6 +43,7 @@ public class Enemy : Character
             player = playerObject.transform;
             targetPosition = player.position;
             lastPlayerPosition = player.position;
+            playerScript = player.GetComponent<Player>();
         }
 
         pathUpdateCoroutine = StartCoroutine(UpdatePathPeriodically());
@@ -111,13 +113,10 @@ public class Enemy : Character
 
         string start = $"({startGridPos.x}, {startGridPos.y})";
         string goal = $"({goalGridPos.x}, {goalGridPos.y})";
-        UnityEngine.Debug.Log("start: " + start + " goal: " + goal);
-        UnityEngine.Debug.Log("gridWidth: " + gridWidth + " gridHeight: " + gridHeight);
         string gridJson = JsonConvert.SerializeObject(GetGrid());
 
         string pythonFilePath = System.IO.Path.Combine(Application.streamingAssetsPath, "astar_pathfinding.py");
         string arguments = $"\"{pythonFilePath}\" \"{start}\" \"{goal}\" \"{gridJson}\"";
-        UnityEngine.Debug.Log("arguments: " + arguments);
         
         isPathFinding = true;
 
@@ -151,7 +150,6 @@ public class Enemy : Character
             CreateNoWindow = true
         };
 
-        UnityEngine.Debug.Log("Starting...");
         using (Process process = Process.Start(startInfo))
         {
             if (process != null)
@@ -162,18 +160,15 @@ public class Enemy : Character
 
                 if (string.IsNullOrEmpty(error))
                 {
-                    UnityEngine.Debug.Log(output);
                     return output;
                 }
                 else
                 {
-                    UnityEngine.Debug.Log(error);
                     return string.Empty;
                 }
             }
         }
 
-        UnityEngine.Debug.Log("Python process failed to start.");
         return string.Empty;
     }
 
@@ -236,18 +231,22 @@ public class Enemy : Character
             Collider2D playerCollider = Physics2D.OverlapCircle(transform.position, attackRange, playerLayer);
             if (playerCollider != null)
             {
-                AttackPlayer(playerCollider);
+                StartCoroutine(AttackPlayerWithDelay(playerCollider));
                 attackCooldownTimer = attackCooldown;
             }
         }
     }
 
-    private void AttackPlayer(Collider2D playerCollider)
+    private IEnumerator AttackPlayerWithDelay(Collider2D playerCollider)
     {
         m_animator.SetTrigger("Attack");
+        yield return new WaitForSeconds(0.6f);
 
-        Character playerCharacter = playerCollider.GetComponent<Character>();
-        playerCharacter?.TakeDamage(attackDamage);
+        if (playerCollider != null && Physics2D.OverlapCircle(transform.position, attackRange, playerLayer) == playerCollider)
+        {
+            Character playerCharacter = playerCollider.GetComponent<Character>();
+            playerCharacter?.TakeDamage(attackDamage);
+        }
     }
 
     public override void TakeDamage(int damage)
@@ -262,7 +261,10 @@ public class Enemy : Character
         {
             if (!counted)
             {
+                playerScript.RecoverHealth();
                 killCount++;
+                UpdateUI();
+
                 counted = true;
             }
             StartCoroutine(HandleDeath());

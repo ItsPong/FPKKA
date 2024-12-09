@@ -1,14 +1,22 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using System.Collections;
+using System.Runtime.CompilerServices;
+
 
 public class Player : Character
 {
     public int attackDamage = 20; 
     public float attackRange = 1.5f;  
     public Transform attackPoint;
-    public LayerMask enemyLayer; 
+    public LayerMask enemyLayer;
 
+    AudioManager audioManager;
+
+    private void Awake()
+    {
+        audioManager = GameObject.FindGameObjectWithTag("Audio").GetComponent<AudioManager>();
+    }
     protected override void Start()
     {
         base.Start();
@@ -63,7 +71,7 @@ public class Player : Character
         if (attackPoint == null) return; 
 
         Collider2D[] hitEnemies = Physics2D.OverlapCircleAll(attackPoint.position, attackRange, enemyLayer);
-
+        audioManager.PlaySFX(audioManager.sword);
         foreach (Collider2D enemy in hitEnemies)
         {
             Character enemyCharacter = enemy.GetComponent<Character>();
@@ -81,13 +89,13 @@ public class Player : Character
         currentHealth -= damage;
         if (currentHealth <= 0)
         {
-            currentHealth = 0;
             Die();
         }
         else
         {
             if (m_animator != null)
             {
+                audioManager.PlaySFX(audioManager.hurt);
                 m_animator.SetTrigger("Hurt");
             }
         }
@@ -97,23 +105,29 @@ public class Player : Character
 
     protected override void Die()
     {
-        m_isDead = true; 
+        if (m_isDead) return;
+        m_isDead = true;
 
         if (m_animator != null)
         {
+            audioManager.PlaySFX(audioManager.death);
             m_animator.SetTrigger("Death");
-            StartCoroutine(HandleDeathAndLoadScene());
-            
-            m_animator.ResetTrigger("Hurt");
-            m_animator.ResetTrigger("Attack1");
-            m_animator.ResetTrigger("Attack2");
-            m_animator.ResetTrigger("Attack3");
+        }
+
+        StartCoroutine(HandleDeathAndLoadScene());
+    }
+
+    public override void RecoverHealth()
+    {
+        if (currentHealth < maxHealth)
+        {
+            currentHealth = currentHealth + 2 > maxHealth ? maxHealth : currentHealth+2;
         }
     }
 
     private IEnumerator HandleDeathAndLoadScene()
     {
-        yield return new WaitForSeconds(2f);
+        yield return new WaitForSeconds(1f);
         PlayerPrefs.SetInt("KillCount", killCount);
         SceneManager.LoadScene("MainMenu");
     }

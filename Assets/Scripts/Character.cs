@@ -5,7 +5,7 @@ public class Character : MonoBehaviour
 {
     public string characterName = "Character";
     protected static int killCount = 0;
-    private int maxHealth = 100;
+    protected int maxHealth = 1000;
     protected int currentHealth;
     public float moveSpeed = 5f;
     protected Animator m_animator;
@@ -17,7 +17,7 @@ public class Character : MonoBehaviour
 
     protected virtual void Start()
     {
-        currentHealth = maxHealth;
+        currentHealth = 100;
 
         if (PlayerPrefs.HasKey("PlayerName"))
         {
@@ -70,4 +70,6 @@ public class Character : MonoBehaviour
             m_animator.SetTrigger("Death");
         }
     }
+
+    public virtual void RecoverHealth() {}
 }
